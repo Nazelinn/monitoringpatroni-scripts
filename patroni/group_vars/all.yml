@@ -1,0 +1,13 @@
+# Ortak Ayarlar
+consul_encrypt_key: "tlLpKrDEuAgMp+XwetR5olYAWcUSkgB0mh8tgloeujE="
+consul_master_token: "88b35c23-5223-4de6-bcd9-4893128b883d"
+datacenter_name: "test-patroni"
+
+# PostgreSQL Kimlik Bilgileri
+pg_superuser: "postgres"
+pg_superuser_pass: "ccnPdhs3WDopnN3oYf"
+pg_standby_user: "standby"
+pg_standby_pass: "zL255XMhysn6zT3vLy"
+
+# IP Listesi (Retry Join için)
+consul_server_ips: ["172.16.240.131", "172.16.240.132", "172.16.240.133"]

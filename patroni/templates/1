@@ -1,0 +1,108 @@
+name: "{{ inventory_hostname }}"
+namespace: "/postgres/"
+scope: "{{ scope }}"
+
+log:
+  level: INFO
+  dir: /var/log/patroni
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    synchronous_mode: true
+    synchronous_node_count: 1
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
+      parameters:
+        archive_command: '/bin/true'
+        archive_mode: 'on'
+        autovacuum_analyze_scale_factor: '0.005'
+        autovacuum_analyze_threshold: '1000'
+        autovacuum_vacuum_scale_factor: '0.001'
+        autovacuum_vacuum_threshold: '5000'
+        autovacuum_work_mem: '256MB'
+        checkpoint_completion_target: '0.8'
+        checkpoint_timeout: '10min'
+        default_statistics_target: '300'
+        effective_cache_size: '1GB'
+        effective_io_concurrency: '50'
+        idle_in_transaction_session_timeout: '1h'
+        jit: 'off'
+        lc_messages: 'C'
+        listen_addresses: '*'
+        log_autovacuum_min_duration: '0'
+        log_filename: 'postgresql-%a.log'
+        log_line_prefix: '< time:%m app:%a host:%h user:%u db:%d pid:%p line:%l trx:%x>'
+        log_lock_waits: 'on'
+        log_min_duration_statement: '500ms'
+        log_rotation_size: '0'
+        log_statement: 'ddl'
+        log_temp_files: '0'
+        log_truncate_on_rotation: 'on'
+        logging_collector: 'on'
+        maintenance_work_mem: '1GB'
+        max_connections: '500'
+        max_wal_size: '4GB'
+        random_page_cost: '1.1'
+        shared_buffers: '1GB'
+        temp_buffers: '8MB'
+        temp_file_limit: '5GB'
+        work_mem: '8MB'
+    pg_hba:
+        - local all postgres trust
+        - host replication standby 127.0.0.1/32 scram-sha-256
+        - host replication standby 0.0.0.0/0 scram-sha-256
+        - host postgres standby 0.0.0.0/0 scram-sha-256
+        - host all postgres 0.0.0.0/0 scram-sha-256
+{% for host in groups['patroni_nodes'] %}
+        - host replication standby {{ hostvars[host]['ansible_host'] }}/32 scram-sha-256
+        - host postgres standby {{ hostvars[host]['ansible_host'] }}/32 scram-sha-256
+        - host all postgres {{ hostvars[host]['ansible_host'] }}/32 scram-sha-256
+{% endfor %}
+        - host all  all  0.0.0.0/0 trust
+
+  
+  users:
+    standby:
+      password: "{{ pg_standby_pass }}"
+      options:
+        - replication
+        - login
+
+consul:
+  host: 127.0.0.1:8500
+  token: "{{ consul_master_token }}"
+  dc: "{{ datacenter_name }}"
+  register_service: true
+
+postgresql:
+  authentication:
+    superuser:
+      username: "{{ pg_superuser }}"
+      password: "{{ pg_superuser_pass }}"
+    replication:
+      username: "{{ pg_standby_user }}"
+      password: "{{ pg_standby_pass }}"
+  connect_address: "{{ ansible_host }}:5432"
+  data_dir: /var/lib/pgsql/{{version}}/data
+  config_dir: /var/lib/pgsql/{{version}}/data
+  bin_dir: /usr/lib/pgsql-{{version}}/bin
+  listen: "0.0.0.0:5432"
+  use_unix_socket: true
+  pgpass: /var/lib/postgresql/.pgpass.patroni
+
+restapi:
+  connect_address: "{{ ansible_host }}:8009"
+  listen: 0.0.0.0:8009
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
