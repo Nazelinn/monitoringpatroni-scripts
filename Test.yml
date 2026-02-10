@@ -1,0 +1,33 @@
+
+
+[root@dba-test-patroni-01 ~]# systemctl  stop patroni 
+[root@dba-test-patroni-01 ~]# /usr/bin/python3.9  servicecheck.py 
+2026-02-06 23:07:18 - ALARM: patroni is down! Attempting to restart...
+2026-02-06 23:07:18 - System initiated. Waiting for DB connection to stabilize...
+[root@dba-test-patroni-01 ~]# systemctl  status  patroni 
+● patroni.service - Runners to orchestrate a high-availability PostgreSQL for dba-test-patroni-01
+   Loaded: loaded (/etc/systemd/system/patroni.service; enabled; vendor preset: disabled)
+   Active: active (running) since Fri 2026-02-06 23:07:18 EST; 1min 0s ago
+ Main PID: 45290 (python3.9)
+    Tasks: 13 (limit: 3679)
+   Memory: 101.5M
+   CGroup: /system.slice/patroni.service
+           ├─45290 /usr/bin/python3.9 /usr/bin/patroni /etc/patroni.yml
+           ├─45307 /usr/pgsql-17/bin/postgres -D /var/lib/pgsql/17/data --config-file=/var/lib/pgsql/17/data/postgresql.conf --listen_addresses=0.0.0.0 --port=5432 --cluster_name=patroni-test --wal_level=replica ->
+           ├─45309 postgres: patroni-test: logger 
+           ├─45310 postgres: patroni-test: checkpointer 
+           ├─45311 postgres: patroni-test: background writer
+
+
+[root@dba-test-patroni-01 ~]# for i in {1..12}; do psql -U postgres -d postgres -c "SELECT pg_sleep(100);" & done
+[root@dba-test-patroni-01 ~]# /usr/bin/python3.9  checkactiveconnections.py
+2026-02-06 23:09:32 - WARNING: High connection count detected: 19 (Threshold: 10)
+[root@dba-test-patroni-01 ~]#
+
+
+
+CREATE TABLE test_boyut (id serial, veri text);
+INSERT INTO test_boyut (veri) SELECT md5(random()::text) FROM generate_series(1, 1000000);
+
+[root@dba-test-patroni-01 ~]# /usr/bin/python3.9  checksize.py
+WARNING: Database [dba_test_patroni_01] table 'test_boyut' exceeded size limit: 130 MB
