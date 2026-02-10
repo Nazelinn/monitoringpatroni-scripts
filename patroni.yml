@@ -1,0 +1,101 @@
+name: "dba-test-patroni-01"
+namespace: "/postgres/"
+scope: "patroni-test"
+
+log:
+  level: INFO
+  dir: /var/log/patroni
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    synchronous_mode: true
+    synchronous_node_count: 1
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
+      parameters:
+        archive_command: '/bin/true'
+        archive_mode: 'on'
+        autovacuum_analyze_scale_factor: '0.005'
+        autovacuum_analyze_threshold: '1000'
+        autovacuum_vacuum_scale_factor: '0.001'
+        autovacuum_vacuum_threshold: '5000'
+        autovacuum_work_mem: '64MB'
+        checkpoint_completion_target: '0.8'
+        checkpoint_timeout: '10min'
+        default_statistics_target: '300'
+        effective_cache_size: '768MB'
+        effective_io_concurrency: '50'
+        idle_in_transaction_session_timeout: '1h'
+        jit: 'off'
+        lc_messages: 'C'
+        listen_addresses: '*'
+        log_autovacuum_min_duration: '0'
+        log_filename: 'postgresql-%a.log'
+        log_line_prefix: '< time:%m app:%a host:%h user:%u db:%d pid:%p line:%l trx:%x>'
+        log_lock_waits: 'on'
+        log_min_duration_statement: '500ms'
+        log_rotation_size: '0'
+        log_statement: 'ddl'
+        log_temp_files: '0'
+        log_truncate_on_rotation: 'on'
+        logging_collector: 'on'
+        maintenance_work_mem: '64MB'
+        max_connections: '100'
+        max_wal_size: '1GB'
+        random_page_cost: '1.1'
+        shared_buffers: '256MB'
+        temp_buffers: '8MB'
+        temp_file_limit: '5GB'
+        work_mem: '2MB'
+    pg_hba:
+        - local all postgres trust
+        - host replication standby 127.0.0.1/32 scram-sha-256
+        - host replication standby 172.16.240.128/32 scram-sha-256
+        - host replication standby 172.16.240.129/32 scram-sha-256
+        - host replication standby 172.16.240.130/32 scram-sha-256
+  
+  users:
+    standby:
+      password: "zL255XMhysn6zT3vLy"
+      options:
+        - replication
+        - login
+
+consul:
+  host: 127.0.0.1:8500
+  token: "88b35c23-5223-4de6-bcd9-4893128b883d"
+  dc: "test-patroni"
+  register_service: true
+
+postgresql:
+  authentication:
+    superuser:
+      username: "postgres"
+      password: "ccnPdhs3WDopnN3oYf"
+    replication:
+      username: "standby"
+      password: "zL255XMhysn6zT3vLy"
+  connect_address: "172.16.240.128:5432"
+  data_dir: /var/lib/pgsql/17/data
+  config_dir: /var/lib/pgsql/17/data
+  bin_dir: /usr/pgsql-17/bin
+  listen: "0.0.0.0:5432"
+  use_unix_socket: true
+  pgpass: /var/lib/pgsql/.pgpass.patroni
+
+restapi:
+  connect_address: "172.16.240.128:8009"
+  listen: 0.0.0.0:8009
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
